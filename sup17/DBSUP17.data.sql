@@ -51,23 +51,23 @@ INSERT INTO CoPresenza
 
 -- 1 sempre assente
 INSERT INTO Assenza
-    SELECT DISTINCT 1, DATE(dataOra), 'G', 1, NULL
+    SELECT DISTINCT 1, DATE(dataOra), 'G', NULL, NULL, 1, NULL
         FROM Attivita;
 
 -- 2 entra sempre alla 3 ora
 INSERT INTO Assenza
-    SELECT DISTINCT 2, DATE(dataOra), 'I', 1, '10:00:00'
+    SELECT DISTINCT 2, DATE(dataOra), 'I', NULL, NULL, 1, '10:00:00'
         FROM Attivita;
 
 -- 3 esce sempre alla 4 ora
 INSERT INTO Assenza
-    SELECT DISTINCT 3, DATE(dataOra), 'U', 1, '11:00:00'
+    SELECT DISTINCT 3, DATE(dataOra), 'U', NULL, NULL, 1, '11:00:00'
         FROM Attivita;
 
 -- 4 entra sempre alla 2 ora ed esce sempre alla 4 ora
 INSERT INTO Assenza
-    SELECT DISTINCT 4, DATE(dataOra), 'I', 1, '10:00:00'
+    SELECT DISTINCT 4, DATE(dataOra), 'I', NULL, NULL, 1, '10:00:00'
         FROM Attivita;
 INSERT INTO Assenza
-    SELECT DISTINCT 4, DATE(dataOra), 'U', 1, '11:00:00'
+    SELECT DISTINCT 4, DATE(dataOra), 'U', NULL, NULL, 1, '11:00:00'
         FROM Attivita;

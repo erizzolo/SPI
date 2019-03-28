@@ -69,10 +69,16 @@ CREATE TABLE Assenza (
 	studente INT NOT NULL COMMENT "Studente Assente",
     data DATE COMMENT "DataOra svolgimento",
     tipo ENUM('G','I','U') COMMENT "Giorno, Ingresso ritardo, Uscita anticipo",
+	-- noti BOOLEAN NOT NULL COMMENT "G or U",
+	-- notu BOOLEAN NOT NULL COMMENT "G or I",
+	noti BOOLEAN AS (tipo != 'I') PERSISTENT COMMENT "G or U",
+	notu BOOLEAN AS (tipo != 'U') PERSISTENT COMMENT "G or I",
 	registrante INT NOT NULL COMMENT "Docente registrante",
     ora TIME NULL DEFAULT NULL COMMENT "Ora se tipo = I/U",
     CONSTRAINT tipologia CHECK(ISNULL(ora) = (tipo = 'G')),
-	PRIMARY KEY(studente, data, tipo, registrante),
+	PRIMARY KEY(studente, data, tipo),
+	CONSTRAINT GorUonlyOnce UNIQUE(studente, data, noti),
+	CONSTRAINT GorIonlyOnce UNIQUE(studente, data, notu),
 	CONSTRAINT Registrazione FOREIGN KEY (registrante) REFERENCES Docente(id)
 		ON UPDATE CASCADE ON DELETE RESTRICT,
 	CONSTRAINT Assente FOREIGN KEY (studente) REFERENCES Studente(id)

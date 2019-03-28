@@ -58,95 +58,19 @@ La traduzione porta a queste relazioni:
 * Interesse(**(*attività*, *classe*)**)
 * CoPresenza(**(*attività*, *docente*)**, tipo)
 * Assenza(**(*studente*, data, tipo, *docente*)**, ora?)
+
+Si noti che in Assenza è ridondante l'attributo docente in chiave primaria, poiché non è possibile (desiderabile) che la stessa assenza di un dato studente sia registrata più volte da diversi docenti.  
+Inoltre sarebbe opportuno che, per uno stesso studente e la stessa data, non possano essere registrate due assenze se non di tipo I e U. Ciò si può ottenere tramite opportuni trigger oppure con due attributi aggiuntivi e due vincoli UNIQUE (si veda lo [script di creazione](DBSUP17.sql))
+
 ### Progettazione fisica
 Oltre alla già anticipata introduzione di chiavi surrogate, per questioni di efficienza si possono introdurre indici per facilitare le ricerche, oltre a quelli automatici per le chiavi primarie ed esterne.  
 Indici:
 * per Studente e Docente: alfabetico(cognome, nome), unique(username), ...
 
 Si inserisce il codice per la creazione del database richiesto dalla seconda parte punto II della traccia (basterebbe, ad es., CoPresenza o Assenza):
-````sql
-DROP DATABASE IF EXISTS DBSUP17;
-CREATE DATABASE  IF NOT EXISTS DBSUP17;
-USE DBSUP17
-CREATE TABLE Classe (
-	sigla VARCHAR(6) COMMENT "Unique identifier",
-	indirizzo VARCHAR(50) NOT NULL COMMENT "Indirizzo di studi",
-	articolazione VARCHAR(50) NULL COMMENT "Articolazione indirizzo",
-	opzione VARCHAR(50) NULL COMMENT "Opzione articolazione",
-	PRIMARY KEY(sigla)
-);
-CREATE TABLE Studente (
-	id INT AUTO_INCREMENT COMMENT "Unique auto generated user id",
-	nome VARCHAR(50) NOT NULL COMMENT "Nome studente",
-	cognome VARCHAR(50) NOT NULL COMMENT "Cognome studente",
-	nascita DATE NOT NULL COMMENT "Data nascita studente",
-	username VARCHAR(50) NOT NULL COMMENT "Nome login studente",
-	password VARCHAR(128) NOT NULL COMMENT "Password hash SHA-2 512 bits",
-	-- e.g. SHA2('myPassword',512)
-    classe VARCHAR(6) NOT NULL COMMENT "Classe di iscrizione",
-	UNIQUE LoginIdentifier (username), -- no duplicates
-	KEY Alfabetico(cognome, nome),
-	PRIMARY KEY(id),
-	CONSTRAINT Iscrizione FOREIGN KEY (classe) REFERENCES Classe(sigla)
-		ON UPDATE CASCADE ON DELETE RESTRICT
-);
-CREATE TABLE Docente (
-	id INT AUTO_INCREMENT COMMENT "Unique auto generated user id",
-	nome VARCHAR(50) NOT NULL COMMENT "Nome docente",
-	cognome VARCHAR(50) NOT NULL COMMENT "Cognome docente",
-	nascita DATE NOT NULL COMMENT "Data nascita docente",
-	username VARCHAR(50) NOT NULL COMMENT "Nome login docente",
-	password VARCHAR(128) NOT NULL COMMENT "Password hash SHA-2 512 bits",
-	-- e.g. SHA2('myPassword',512)
-	UNIQUE LoginIdentifier (username), -- no duplicates
-	KEY Alfabetico(cognome, nome),
-	PRIMARY KEY(id)
-);
-CREATE TABLE Attivita (
-    dataOra DATETIME COMMENT "DataOra svolgimento",
-    responsabile INT NOT NULL COMMENT "Docente responsabile",
-    materia VARCHAR(50) NOT NULL COMMENT "Materia dell'attività",
-    PRIMARY KEY(dataOra, responsabile),
-    CONSTRAINT Responsabilita FOREIGN KEY (responsabile) REFERENCES Docente(id)
-        ON UPDATE CASCADE ON DELETE RESTRICT
-);
-CREATE TABLE Interesse (
-    dataOra DATETIME COMMENT "DataOra svolgimento",
-	responsabile INT NOT NULL COMMENT "Docente responsabile",
-	classe VARCHAR(6) NOT NULL COMMENT "Classe coinvolta",
-	PRIMARY KEY(dataOra, responsabile, classe),
-	CONSTRAINT AttivitaInteresse FOREIGN KEY (dataOra, responsabile) REFERENCES Attivita(dataOra, responsabile)
-		ON UPDATE CASCADE ON DELETE RESTRICT,
-	CONSTRAINT ClasseInteresse FOREIGN KEY (classe) REFERENCES Classe(sigla)
-		ON UPDATE CASCADE ON DELETE RESTRICT
-);
-CREATE TABLE CoPresenza (
-    dataOra DATETIME COMMENT "DataOra svolgimento",
-	responsabile INT NOT NULL COMMENT "Docente responsabile",
-	presente INT NOT NULL COMMENT "Docente presente",
-    tipo VARCHAR(20) NOT NULL COMMENT "Tipo CoPresenza",
-    CONSTRAINT NoSelfies CHECK(presente != responsabile),
-	PRIMARY KEY(dataOra, responsabile, presente),
-	CONSTRAINT AttivitaCoPresenza FOREIGN KEY (dataOra, responsabile) REFERENCES Attivita(dataOra, responsabile)
-		ON UPDATE CASCADE ON DELETE RESTRICT,
-	CONSTRAINT CoPresente FOREIGN KEY (presente) REFERENCES Docente(id)
-		ON UPDATE CASCADE ON DELETE RESTRICT
-);
-CREATE TABLE Assenza (
-	studente INT NOT NULL COMMENT "Studente Assente",
-    data DATE COMMENT "DataOra svolgimento",
-    tipo ENUM('G','I','U') COMMENT "Giorno, Ingresso ritardo, Uscita anticipo",
-	registrante INT NOT NULL COMMENT "Docente registrante",
-    ora TIME NULL DEFAULT NULL COMMENT "Ora se tipo = I/U",
-    CONSTRAINT tipologia CHECK(ISNULL(ora) = (tipo = 'G')),
-	PRIMARY KEY(studente, data, tipo, registrante),
-	CONSTRAINT Registrazione FOREIGN KEY (registrante) REFERENCES Docente(id)
-		ON UPDATE CASCADE ON DELETE RESTRICT,
-	CONSTRAINT Assente FOREIGN KEY (studente) REFERENCES Studente(id)
-		ON UPDATE CASCADE ON DELETE RESTRICT
-);
-````
+[script di creazione schema](DBSUP17.sql), [script di inserimento dati di prova](DBSUP17.data.sql).
 ## Interrogazioni in linguaggio SQL
+Vedasi [script di esecuzione queries](DBSUP17.quey.sql).
 ### a. elencare tutte le assenze dall’inizio dell’anno di un certo studente con la relativa data
 Si suppone non interessi il docente registrante, nè le attività coinvolte, ma solo la data, il tipo e l'eventuale ora.
 ````sql
@@ -206,19 +130,20 @@ SELECT d.id, d.cognome, d.nome, a.materia, COUNT(*) as ore
 ````
 Nella seconda la query è simile ma è necessario unire i dati della tabella Attivita a quelli derivanti da CoPresenza, ad esempio tramite una view con UNION.
 #### b) visualizzare per ciascuna classe la media delle ore di assenza
-Conviene creare una view basata sulla query c della prima parte:
+Conviene creare una view basata sulla query c della prima parte, leggermente modificata per includere anche gli studenti senza assenze:
 ````sql
-CREATE VIEW ClasseStudenteAssenze AS
-    SELECT c.sigla, s.id, COUNT(*) AS OreAssenza
+CREATE OR REPLACE VIEW ClasseStudenteAssenze AS
+    SELECT c.sigla, s.id, COUNT(a.data) AS OreAssenza
         FROM Studente s
             JOIN Classe c ON(c.sigla = s.classe)
             JOIN Interesse i ON(c.sigla = i.classe)
             JOIN Attivita l USING (dataOra, responsabile)
-            JOIN Assenza a ON(s.id = a.studente)
-        WHERE a.data = DATE(l.dataOra) AND
-            (a.tipo = 'G' OR
-            (a.tipo = 'I' AND TIME(l.dataOra) < a.ora) OR
-            (a.tipo = 'U' AND TIME(l.dataOra) >= a.ora))
+            LEFT JOIN Assenza a ON(s.id = a.studente)
+        WHERE a.data IS NULL OR
+            (a.data = DATE(l.dataOra) AND
+                (a.tipo = 'G' OR
+                (a.tipo = 'I' AND TIME(l.dataOra) < a.ora) OR
+                (a.tipo = 'U' AND TIME(l.dataOra) >= a.ora)))
         GROUP BY s.id;
 ````
 E successivamente la query è relativamente semplice:
