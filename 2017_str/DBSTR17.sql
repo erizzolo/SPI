@@ -56,7 +56,7 @@ CREATE TABLE Commissario (
         ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
-SET GLOBAL innodb_large_prefix = 1; -- allows key length up to 3072B
+-- SET GLOBAL innodb_large_prefix = 1; -- allows key length up to 3072B
 CREATE TABLE Scheda (
 	id INT AUTO_INCREMENT COMMENT "Unique auto generated id",
     titolo VARCHAR(255) NOT NULL COMMENT "Titolo scheda",

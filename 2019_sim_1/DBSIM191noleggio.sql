@@ -58,13 +58,13 @@ CREATE TABLE NoleggioConcluso (
     ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT Riconsegna FOREIGN KEY (stazPrelievo) REFERENCES Stazione(id)
     ON UPDATE CASCADE ON DELETE RESTRICT,
-  CONSTRAINT Responsabile FOREIGN KEY (ytente) REFERENCES Utente(id)
+  CONSTRAINT Responsabile FOREIGN KEY (utente) REFERENCES Utente(id)
     ON UPDATE CASCADE ON DELETE RESTRICT
 );
 DELIMITER //
 CREATE TRIGGER Rental AFTER UPDATE ON Bicicletta FOR EACH ROW
   BEGIN
-    IF IS NULL OLD.utente
+    IF OLD.utente IS NULL THEN
       -- prelievo
         UPDATE Stazione SET liberi = liberi + 1, occupati = occupati - 1
           WHERE id = NEW.stazione;
@@ -76,7 +76,7 @@ CREATE TRIGGER Rental AFTER UPDATE ON Bicicletta FOR EACH ROW
         SET @COSTO = 5; -- forfait 5.00 €
         INSERT INTO NoleggioConcluso
           VALUES(NEW.id, OLD.utente, OLD.stazione, OLD.tempoPrelievo, NEW.stazione, NOW(), @COSTO);
-    END
+    END IF;
   END;
 //
 DELIMITER ;
