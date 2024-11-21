@@ -7,7 +7,7 @@ Si fanno quindi delle ipotesi semplificative per ridurre l'ambito dell'analisi:
 * tutti gli studenti di una classe partecipano alle medesime attività (= ore di lezione)
 * tutte le attività hanno una durata di un'ora: attività con durata di n ore sono registrate come n attivitò separate
 * ciascuna attività (non sovrapposta ad altre) ha un docente "responsabile" che la registra, mentre i docenti "co-presenti" possono solo firmare la loro presenza ad attività già inserite
-* non si considerano entrate/uscite se non all'inzio/fine di un'ora
+* non si considerano entrate/uscite se non all'inizio/fine di un'ora
 * i docenti "principali" possono indicare qualunque materia, indipendentemente dalla composizione della loro cattedra
 * la password per l'accesso ai dati di uno studente è unica (valevole per lo studente ed i suoi genitori)
 * ...
